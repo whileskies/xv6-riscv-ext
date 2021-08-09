@@ -10,6 +10,8 @@
 #include "proc.h"
 #include "net.h"
 #include "defs.h"
+#include "debug.h"
+#include "tcp.h"
 
 static uint32 local_ip = MAKE_IP_ADDR(10, 0, 2, 15); // qemu's idea of the guest IP
 static uint8 local_mac[ETHADDR_LEN] = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
@@ -303,7 +305,7 @@ net_rx_udp(struct mbuf *m, uint16 len, struct ip *iphdr)
   if (len > m->len)
     goto fail;
   // minimum packet size could be larger than the payload
-  mbuftrim(m, m->len - len);
+  // mbuftrim(m, m->len - len);
 
   // parse the necessary fields
   sip = ntohl(iphdr->ip_src);
@@ -316,6 +318,45 @@ fail:
   mbuffree(m);
 }
 
+char*
+ip_addr_2_h(uint32 ip, char *hip, uint size)
+{
+  memset(hip, 0, size);
+  uint8 *ptr = (uint8 *)&ip;
+  snprintf(hip, size, "%d.%d.%d.%d",
+        ptr[0], ptr[1], ptr[2], ptr[3]);
+
+  return hip;
+}
+
+void
+ip_dump(struct ip *iphdr, struct mbuf *m)
+{
+  // printf(purple([ip])"\n");
+  ipdbg("[ip]\n");
+  ipdbg("version: %d, hl: %d\n", (iphdr->ip_vhl & 0xf0) >> 4, (iphdr->ip_vhl & 0x0f) << 2);
+  ipdbg("tos: 0x%x\n", iphdr->ip_tos);
+  ipdbg("len: %d\n", ntohs(iphdr->ip_len));
+  ipdbg("id: %d\n", ntohs(iphdr->ip_id));
+  uint16 offset = iphdr->ip_off;
+  ipdbg("flags: 0x%x, off: %d\n", (offset & 0xe0) >> 5, (offset & 0x1f));
+  ipdbg("ttl: %d\n", iphdr->ip_ttl);
+  if (iphdr->ip_p == IPPROTO_ICMP)
+    ipdbg("protocol: ICMP\n");
+  else if (iphdr->ip_p == IPPROTO_TCP)
+    ipdbg("protocol: TCP\n");
+  else if (iphdr->ip_p == IPPROTO_UDP)
+    ipdbg("protocol: UDP\n");
+  else
+    ipdbg("protocol: Unknow %d\n", iphdr->ip_p);
+  ipdbg("sum: 0x%x\n", ntohs(iphdr->ip_sum));
+  char ip[IP_ADDR_LEN];
+  ipdbg("src: %s\n", ip_addr_2_h(iphdr->ip_src, ip, IP_ADDR_LEN));
+  ipdbg("dst: %s\n", ip_addr_2_h(iphdr->ip_dst, ip, IP_ADDR_LEN));
+
+  hexdump(m->head, m->len);
+}
+
 // receives an IP packet
 static void
 net_rx_ip(struct mbuf *m)
@@ -326,6 +367,10 @@ net_rx_ip(struct mbuf *m)
   iphdr = mbufpullhdr(m, *iphdr);
   if (!iphdr)
 	  goto fail;
+  
+#ifdef IP_DEBUG
+  ip_dump(iphdr, m);
+#endif
 
   // check IP version and header len
   if (iphdr->ip_vhl != ((4 << 4) | (20 >> 2)))
@@ -340,11 +385,18 @@ net_rx_ip(struct mbuf *m)
   if (htonl(iphdr->ip_dst) != local_ip)
     goto fail;
   // can only support UDP
-  if (iphdr->ip_p != IPPROTO_UDP)
+  if (iphdr->ip_p != IPPROTO_UDP && iphdr->ip_p != IPPROTO_TCP)
     goto fail;
 
   len = ntohs(iphdr->ip_len) - sizeof(*iphdr);
-  net_rx_udp(m, len, iphdr);
+  // minimum packet size could be larger than the payload
+  mbuftrim(m, m->len - len);
+  if (iphdr->ip_p == IPPROTO_UDP) {
+    net_rx_udp(m, len, iphdr);
+  } else if (iphdr->ip_p == IPPROTO_TCP) {
+    net_rx_tcp(m, len, iphdr);
+  }
+  
   return;
 
 fail:

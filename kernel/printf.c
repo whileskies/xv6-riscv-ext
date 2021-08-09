@@ -59,7 +59,7 @@ printptr(uint64 x)
     consputc(digits[x >> (sizeof(uint64) * 8 - 4)]);
 }
 
-// Print to the console. only understands %d, %x, %p, %s.
+// Print to the console. only understands %d, %x, %p, %c, %s.
 void
 printf(char *fmt, ...)
 {
@@ -92,6 +92,9 @@ printf(char *fmt, ...)
       break;
     case 'p':
       printptr(va_arg(ap, uint64));
+      break;
+    case 'c':
+      consputc(va_arg(ap, int));
       break;
     case 's':
       if((s = va_arg(ap, char*)) == 0)

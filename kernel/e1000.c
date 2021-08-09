@@ -7,6 +7,7 @@
 #include "defs.h"
 #include "e1000_dev.h"
 #include "net.h"
+#include "debug.h"
 
 #define TX_RING_SIZE 16
 static struct tx_desc tx_ring[TX_RING_SIZE] __attribute__((aligned(16)));
@@ -101,6 +102,8 @@ e1000_transmit(struct mbuf *m)
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
   //
+  e1000dbg("[e1000] %d len data transmit\n", m->len);
+
   acquire(&e1000_lock);
 
   int tail = regs[E1000_TDT];
@@ -144,6 +147,8 @@ e1000_recv(void)
     rx_ring[i].addr = (uint64) rx_mbufs[i]->head;
     rx_ring[i].status = 0;
     regs[E1000_RDT] = i;
+
+    e1000dbg("[e1000] %d len data received\n", rb->len);
 
     net_rx(rb);
 

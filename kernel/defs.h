@@ -8,10 +8,8 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-#ifdef LAB_NET
 struct mbuf;
 struct sock;
-#endif
 
 // bio.c
 void            binit(void);
@@ -197,24 +195,10 @@ void            virtio_disk_intr(void);
 
 
 
-#ifdef LAB_PGTBL
-// vmcopyin.c
-int             copyin_new(pagetable_t, char *, uint64, uint64);
-int             copyinstr_new(pagetable_t, char *, uint64, uint64);
-#endif
-
-// stats.c
-void            statsinit(void);
-void            statsinc(void);
-
 // sprintf.c
 int             snprintf(char*, int, char*, ...);
 
-#ifdef KCSAN
-void            kcsaninit();
-#endif
 
-#ifdef LAB_NET
 // pci.c
 void            pci_init();
 
@@ -234,4 +218,3 @@ void            sockclose(struct sock *);
 int             sockread(struct sock *, uint64, int);
 int             sockwrite(struct sock *, uint64, int);
 void            sockrecvudp(struct mbuf*, uint32, uint16, uint16);
-#endif

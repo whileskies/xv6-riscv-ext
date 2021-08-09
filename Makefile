@@ -52,19 +52,15 @@ OBJS += \
 	$K/vmcopyin.o
 endif
 
-ifeq ($(LAB),$(filter $(LAB), pgtbl lock))
-OBJS += \
-	$K/stats.o\
-	$K/sprintf.o
-endif
-
-
 ifeq ($(LAB),net)
 OBJS += \
 	$K/e1000.o \
 	$K/net.o \
 	$K/sysnet.o \
-	$K/pci.o
+	$K/pci.o \
+	$K/debug.o \
+	$K/sprintf.o \
+	$K/tcp.o
 endif
 
 
@@ -96,9 +92,22 @@ OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 
-ifdef LAB
+CONFIG_E1000_DEBUG = 1
+CONFIG_IP_DEBUG = 1
+CONFIG_TCP_DEBUG = 1
 LABUPPER = $(shell echo $(LAB) | tr a-z A-Z)
 XCFLAGS += -DSOL_$(LABUPPER) -DLAB_$(LABUPPER)
+
+ifeq ($(CONFIG_E1000_DEBUG), 1)
+	XCFLAGS += -DE1000_DEBUG
+endif
+
+ifeq ($(CONFIG_IP_DEBUG), 1)
+	XCFLAGS += -DIP_DEBUG
+endif
+
+ifeq ($(CONFIG_TCP_DEBUG), 1)
+	XCFLAGS += -DTCP_DEBUG
 endif
 
 CFLAGS += $(XCFLAGS)
@@ -291,13 +300,14 @@ CPUS := 1
 endif
 
 FWDPORT = $(shell expr `id -u` % 5000 + 25999)
+TCPPORT = 12345
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
 ifeq ($(LAB),net)
-QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT)-:2000 -object filter-dump,id=net0,netdev=net0,file=packets.pcap
+QEMUOPTS += -netdev user,id=net0,hostfwd=udp::$(FWDPORT)-:2000,hostfwd=tcp::$(TCPPORT)-:$(TCPPORT) -object filter-dump,id=net0,netdev=net0,file=packets.pcap
 QEMUOPTS += -device e1000,netdev=net0,bus=pcie.0
 endif
 

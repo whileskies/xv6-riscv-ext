@@ -80,11 +80,9 @@ fileclose(struct file *f)
     iput(ff.ip);
     end_op();
   }
-#ifdef LAB_NET
   else if(ff.type == FD_SOCK){
     sockclose(ff.sock);
   }
-#endif
 }
 
 // Get metadata about file f.
@@ -128,11 +126,9 @@ fileread(struct file *f, uint64 addr, int n)
       f->off += r;
     iunlock(f->ip);
   }
-#ifdef LAB_NET
   else if(f->type == FD_SOCK){
     r = sockread(f->sock, addr, n);
   }
-#endif
   else {
     panic("fileread");
   }
@@ -185,11 +181,9 @@ filewrite(struct file *f, uint64 addr, int n)
     }
     ret = (i == n ? n : -1);
   }
-#ifdef LAB_NET
   else if(f->type == FD_SOCK){
     ret = sockwrite(f->sock, addr, n);
   }
-#endif
   else {
     panic("filewrite");
   }

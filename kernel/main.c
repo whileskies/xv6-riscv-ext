@@ -3,6 +3,7 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
+#include "debug.h"
 
 volatile static int started = 0;
 
@@ -19,6 +20,10 @@ main()
     printf("\n");
     printf("xv6 kernel is booting\n");
     printf("\n");
+    printf(yellow("hhhh\n"));
+
+    char *s = "hello world hello world hello world";
+    hexdump(s, strlen(s));
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging
@@ -31,14 +36,9 @@ main()
     iinit();         // inode cache
     fileinit();      // file table
     virtio_disk_init(); // emulated hard disk
-#ifdef LAB_NET
     pci_init();
     sockinit();
-#endif    
     userinit();      // first user process
-#ifdef KCSAN
-    kcsaninit();
-#endif
     __sync_synchronize();
     started = 1;
   } else {

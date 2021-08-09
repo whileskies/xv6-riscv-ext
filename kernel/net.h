@@ -103,6 +103,8 @@ struct ip {
 #define IPPROTO_TCP  6  // Transmission control protocol
 #define IPPROTO_UDP  17 // User datagram protocol
 
+#define IP_ADDR_LEN 16
+
 #define MAKE_IP_ADDR(a, b, c, d)           \
   (((uint32)a << 24) | ((uint32)b << 16) | \
    ((uint32)c << 8) | (uint32)d)

@@ -486,7 +486,6 @@ sys_pipe(void)
 }
 
 
-#ifdef LAB_NET
 int
 sys_connect(void)
 {
@@ -511,4 +510,3 @@ sys_connect(void)
 
   return fd;
 }
-#endif
