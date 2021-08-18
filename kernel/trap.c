@@ -213,6 +213,8 @@ devintr()
 
     if(cpuid() == 0){
       clockintr();
+    }else if(cpuid() == 1) {
+      timers_exe_all();
     }
     
     // acknowledge the software interrupt by clearing

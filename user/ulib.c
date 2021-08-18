@@ -32,6 +32,17 @@ strlen(const char *s)
   return n;
 }
 
+char *
+strcat(char *dst, char *src)
+{
+  char *s = dst;
+  while (*dst)
+    dst++;
+  while ((*dst++ = *src++) != 0);
+
+  return s;
+}
+
 void*
 memset(void *dst, int c, uint n)
 {

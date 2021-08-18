@@ -11,6 +11,8 @@ struct superblock;
 struct mbuf;
 struct sock;
 
+struct sockaddr;
+
 // bio.c
 void            binit(void);
 struct buf*     bread(uint, uint);
@@ -210,6 +212,7 @@ int             e1000_transmit(struct mbuf*);
 // net.c
 void            net_rx(struct mbuf*);
 void            net_tx_udp(struct mbuf*, uint32, uint16, uint16);
+void            net_tx_ip(struct mbuf *, uint8, uint32);
 
 // sysnet.c
 void            sockinit(void);
@@ -218,3 +221,25 @@ void            sockclose(struct sock *);
 int             sockread(struct sock *, uint64, int);
 int             sockwrite(struct sock *, uint64, int);
 void            sockrecvudp(struct mbuf*, uint32, uint16, uint16);
+
+
+// socket.c
+int alloc_port(struct file *f, uint16 p);
+int auto_alloc_port(struct file *f);
+
+int  socket(struct file **f, int domain, int type, int protocol);
+
+struct tcp_sock *tcp_sock_alloc();
+int tcp_bind(struct file *f, struct sockaddr *addr, int addrlen);
+int tcp_connect(struct file *f, struct sockaddr *addr, int addrlen, int port);
+int tcp_listen(struct file *f, int backlog);
+int tcp_read(struct file *f, uint64 addr, int n);
+int tcp_write(struct file *f, uint64 ubuf, int len);
+int tcp_close(struct file *f);
+
+// timer.c
+void timer_init();
+struct timer * timer_add(uint32 expire, void *(*handler)(void *), void *arg);
+void timer_add_in_handler(uint32 expire, void *(*handler)(void *), void *arg);
+void timer_cancel(struct timer *t);
+void timers_exe_all();

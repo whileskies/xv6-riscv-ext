@@ -15,6 +15,10 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "list.h"
+#include "mbuf.h"
+#include "net.h"
+#include "tcp.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -486,8 +490,9 @@ sys_pipe(void)
 }
 
 
+// udp connect
 int
-sys_connect(void)
+sys_uconnect(void)
 {
   struct file *f;
   int fd;
@@ -503,6 +508,135 @@ sys_connect(void)
 
   if(sockalloc(&f, raddr, lport, rport) < 0)
     return -1;
+  if((fd=fdalloc(f)) < 0){
+    fileclose(f);
+    return -1;
+  }
+
+  return fd;
+}
+
+int
+sys_socket(void)
+{
+  struct file *f;
+  int fd;
+  int domain;
+  int type;
+  int protocol;
+
+  if (argint(0, &domain) < 0 ||
+      argint(1, &type) < 0 ||
+      argint(2, &protocol) < 0) {
+        return -1;
+  }
+
+  if ((f = filealloc()) == 0) {
+    fileclose(f);
+    return -1;
+  }
+  
+  if(socket(&f, domain, type, protocol) < 0 || (fd=fdalloc(f)) < 0){
+    fileclose(f);
+    return -1;
+  }
+
+  return fd;
+}
+
+int
+sys_bind(void)
+{
+  struct file *f;
+  uint64 uaddr;
+  int addrlen;
+
+  if (argfd(0, 0, &f) < 0 || argaddr(1, &uaddr) < 0 || argint(2, &addrlen) < 0)
+    return -1;
+
+  struct sockaddr ksa;
+  copyin(myproc()->pagetable, (char *)&ksa, uaddr, addrlen);
+  struct sockaddr_in *sin = (struct sockaddr_in *)&ksa;
+  sin->sin_addr = ntohl(sin->sin_addr);
+  sin->sin_port = ntohs(sin->sin_port);
+
+  return tcp_bind(f, &ksa, addrlen);
+}
+
+int
+sys_connect()
+{
+  struct file *f;
+  uint64 uaddr;
+  int addrlen;
+
+  if (argfd(0, 0, &f) < 0 || argaddr(1, &uaddr) < 0 || argint(2, &addrlen) < 0)
+    return -1;
+
+  struct sockaddr ksa;
+  copyin(myproc()->pagetable, (char *)&ksa, uaddr, addrlen);
+  struct sockaddr_in *sin = (struct sockaddr_in *)&ksa;
+  sin->sin_addr = ntohl(sin->sin_addr);
+  sin->sin_port = ntohs(sin->sin_port);
+
+  uint16 port = auto_alloc_port(f);
+  
+  if (f->type == FD_SOCK_UDP) {
+    if(sockalloc(&f, sin->sin_addr, port, sin->sin_port) < 0)
+      return -1;
+  } else if (f->type == FD_SOCK_TCP) {
+    return tcp_connect(f, &ksa, addrlen, port);
+  }
+
+  return 0;
+}
+
+int
+sys_listen(void)
+{
+  struct file *f;
+  int backlog;
+
+  if (argfd(0, 0, &f) < 0 || argint(1, &backlog) < 0)
+    return -1;
+
+  return tcp_listen(f, backlog);
+}
+
+int
+sys_accept(void)
+{
+  struct file *f;
+  int fd;
+  uint64 uaddr;
+  uint64 addrlen;
+
+  if (argfd(0, 0, &f) < 0 || argaddr(1, &uaddr) < 0 || argaddr(2, &addrlen) < 0)
+    return -1;
+
+  struct tcp_sock *newts = tcp_accept(f);
+
+  if (uaddr && addrlen > 0) {
+    struct sockaddr ksa;
+    struct sockaddr_in *sin = (struct sockaddr_in *)&ksa;
+    sin->sin_addr = htonl(newts->daddr);
+    sin->sin_port = htons(newts->dport);
+    sin->sin_family = AF_INET;
+    copyout(myproc()->pagetable, uaddr, (char *)&ksa, sizeof(struct sockaddr));
+    uint64 pa = walkaddr(myproc()->pagetable, addrlen);
+    *(uint64 *)pa = sizeof(struct sockaddr);
+  }
+
+  if ((f = filealloc()) == 0) {
+    fileclose(f);
+    return -1;
+  }
+
+  f->type = FD_SOCK_TCP;
+  f->readable = 1;
+  f->writable = 1;
+  f->tcpsock = newts;
+
   if((fd=fdalloc(f)) < 0){
     fileclose(f);
     return -1;

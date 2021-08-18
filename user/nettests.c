@@ -21,8 +21,8 @@ ping(uint16 sport, uint16 dport, int attempts)
   // you can send a UDP packet to any Internet address
   // by using a different dst.
   
-  if((fd = connect(dst, sport, dport)) < 0){
-    fprintf(2, "ping: connect() failed\n");
+  if((fd = uconnect(dst, sport, dport)) < 0){
+    fprintf(2, "ping: uconnect() failed\n");
     exit(1);
   }
 
@@ -200,8 +200,8 @@ dns()
   // 8.8.8.8: google's name server
   dst = (8 << 24) | (8 << 16) | (8 << 8) | (8 << 0);
 
-  if((fd = connect(dst, 10000, 53)) < 0){
-    fprintf(2, "ping: connect() failed\n");
+  if((fd = uconnect(dst, 10000, 53)) < 0){
+    fprintf(2, "ping: uconnect() failed\n");
     exit(1);
   }
 

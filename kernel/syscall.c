@@ -104,6 +104,11 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
+extern uint64 sys_uconnect(void);
+extern uint64 sys_socket(void);
+extern uint64 sys_bind(void);
+extern uint64 sys_listen(void);
+extern uint64 sys_accept(void);
 extern uint64 sys_connect(void);
 
 static uint64 (*syscalls[])(void) = {
@@ -128,7 +133,12 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-[SYS_connect] sys_connect,
+[SYS_uconnect] sys_uconnect,
+[SYS_socket]  sys_socket,
+[SYS_bind]    sys_bind,
+[SYS_listen]  sys_listen,
+[SYS_accept]  sys_accept,
+[SYS_connect] sys_connect
 };
 
 

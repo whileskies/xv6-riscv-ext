@@ -60,7 +60,14 @@ OBJS += \
 	$K/pci.o \
 	$K/debug.o \
 	$K/sprintf.o \
-	$K/tcp.o
+	$K/mbuf.o \
+	$K/tcp.o \
+	$K/tcp_out.o \
+	$K/tcp_in.o \
+	$K/tcp_socket.o \
+	$K/tcp_data.o \
+	$K/socket.o \
+	$K/timer.o
 endif
 
 
@@ -92,9 +99,10 @@ OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
 
-CONFIG_E1000_DEBUG = 1
-CONFIG_IP_DEBUG = 1
-CONFIG_TCP_DEBUG = 1
+CONFIG_E1000_DEBUG = 0
+CONFIG_IP_DEBUG = 0
+CONFIG_TCP_DEBUG = 0
+CONFIG_TIMER_DEBUG = 0
 LABUPPER = $(shell echo $(LAB) | tr a-z A-Z)
 XCFLAGS += -DSOL_$(LABUPPER) -DLAB_$(LABUPPER)
 
@@ -108,6 +116,10 @@ endif
 
 ifeq ($(CONFIG_TCP_DEBUG), 1)
 	XCFLAGS += -DTCP_DEBUG
+endif
+
+ifeq ($(CONFIG_TIMER_DEBUG), 1)
+	XCFLAGS += -TIMER_DEBUG
 endif
 
 CFLAGS += $(XCFLAGS)
@@ -205,6 +217,9 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_tcp \
+	$U/_mywget \
+	$U/_myhttpd \
 
 
 
@@ -300,7 +315,7 @@ CPUS := 1
 endif
 
 FWDPORT = $(shell expr `id -u` % 5000 + 25999)
-TCPPORT = 12345
+TCPPORT = 2222
 
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0

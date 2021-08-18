@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "defs.h"
 #include "e1000_dev.h"
+#include "list.h"
+#include "mbuf.h"
 #include "net.h"
 #include "debug.h"
 

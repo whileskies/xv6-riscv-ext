@@ -4,26 +4,36 @@
 #include "riscv.h"
 #include "defs.h"
 #include "debug.h"
+#include "list.h"
+#include "mbuf.h"
+#include "spinlock.h"
+#include "net.h"
+#include "tcp.h"
 
 volatile static int started = 0;
+
+
+int cnt = 0;
+void*
+hello(void *arg)
+{
+  printf("hhhhh hello!!! in timer!!!\n");
+  if (++cnt < 5)
+    timer_add_in_handler(10, hello, NULL);
+  return NULL;
+}
 
 // start() jumps here in supervisor mode on all CPUs.
 void
 main()
 {
   if(cpuid() == 0){
+    timer_init();
     consoleinit();
-#if defined(LAB_PGTBL) || defined(LAB_LOCK)
-    statsinit();
-#endif
     printfinit();
     printf("\n");
     printf("xv6 kernel is booting\n");
     printf("\n");
-    printf(yellow("hhhh\n"));
-
-    char *s = "hello world hello world hello world";
-    hexdump(s, strlen(s));
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging
@@ -39,6 +49,7 @@ main()
     pci_init();
     sockinit();
     userinit();      // first user process
+    // timer_add(10, hello, NULL);
     __sync_synchronize();
     started = 1;
   } else {

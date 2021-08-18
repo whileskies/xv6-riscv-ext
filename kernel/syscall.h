@@ -29,4 +29,9 @@
 #define SYS_symlink 26
 #define SYS_mmap   27
 #define SYS_munmap 28
-#define SYS_connect 29
+#define SYS_uconnect 29
+#define SYS_socket 30
+#define SYS_bind 31
+#define SYS_listen 32
+#define SYS_accept 33
+#define SYS_connect 34

@@ -1,5 +1,5 @@
 //
-// network system calls.
+// network system calls.  UDP
 //
 
 #include "types.h"
@@ -12,8 +12,11 @@
 #include "fs.h"
 #include "sleeplock.h"
 #include "file.h"
+#include "list.h"
+#include "mbuf.h"
 #include "net.h"
 
+// UDP used
 struct sock {
   struct sock *next; // the next socket in the list
   uint32 raddr;      // the remote IPv4 address
@@ -23,13 +26,20 @@ struct sock {
   struct mbufq rxq;  // a queue of packets waiting to be received
 };
 
-static struct spinlock lock;
-static struct sock *sockets;
+struct spinlock udp_lock;
+struct sock *udp_sockets;
+
+struct spinlock tcpsocks_list_lk;
+struct list_head tcpsocks_list_head;
 
 void
 sockinit(void)
 {
-  initlock(&lock, "socktbl");
+  initlock(&udp_lock, "socktbl");
+
+  initlock(&tcpsocks_list_lk, "tcpsocks_list_lk");
+  list_init(&tcpsocks_list_head);
+  
 }
 
 int
@@ -50,26 +60,26 @@ sockalloc(struct file **f, uint32 raddr, uint16 lport, uint16 rport)
   si->rport = rport;
   initlock(&si->lock, "sock");
   mbufq_init(&si->rxq);
-  (*f)->type = FD_SOCK;
+  (*f)->type = FD_SOCK_UDP;
   (*f)->readable = 1;
   (*f)->writable = 1;
   (*f)->sock = si;
 
   // add to list of sockets
-  acquire(&lock);
-  pos = sockets;
+  acquire(&udp_lock);
+  pos = udp_sockets;
   while (pos) {
     if (pos->raddr == raddr &&
         pos->lport == lport &&
 	pos->rport == rport) {
-      release(&lock);
+      release(&udp_lock);
       goto bad;
     }
     pos = pos->next;
   }
-  si->next = sockets;
-  sockets = si;
-  release(&lock);
+  si->next = udp_sockets;
+  udp_sockets = si;
+  release(&udp_lock);
   return 0;
 
 bad:
@@ -87,8 +97,8 @@ sockclose(struct sock *si)
   struct mbuf *m;
 
   // remove from list of sockets
-  acquire(&lock);
-  pos = &sockets;
+  acquire(&udp_lock);
+  pos = &udp_sockets;
   while (*pos) {
     if (*pos == si){
       *pos = si->next;
@@ -96,7 +106,7 @@ sockclose(struct sock *si)
     }
     pos = &(*pos)->next;
   }
-  release(&lock);
+  release(&udp_lock);
 
   // free any pending mbufs
   while (!mbufq_empty(&si->rxq)) {
@@ -165,14 +175,14 @@ sockrecvudp(struct mbuf *m, uint32 raddr, uint16 lport, uint16 rport)
   //
   struct sock *si;
 
-  acquire(&lock);
-  si = sockets;
+  acquire(&udp_lock);
+  si = udp_sockets;
   while (si) {
     if (si->raddr == raddr && si->lport == lport && si->rport == rport)
       goto found;
     si = si->next;
   }
-  release(&lock);
+  release(&udp_lock);
   mbuffree(m);
   return;
 
@@ -181,5 +191,5 @@ found:
   mbufq_pushtail(&si->rxq, m);
   wakeup(&si->rxq);
   release(&si->lock);
-  release(&lock);
+  release(&udp_lock);
 }

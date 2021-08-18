@@ -79,9 +79,10 @@ fileclose(struct file *f)
     begin_op();
     iput(ff.ip);
     end_op();
-  }
-  else if(ff.type == FD_SOCK){
+  } else if(ff.type == FD_SOCK_UDP){
     sockclose(ff.sock);
+  } else if (ff.type == FD_SOCK_TCP){
+    tcp_close(&ff);
   }
 }
 
@@ -125,9 +126,10 @@ fileread(struct file *f, uint64 addr, int n)
     if((r = readi(f->ip, 1, addr, f->off, n)) > 0)
       f->off += r;
     iunlock(f->ip);
-  }
-  else if(f->type == FD_SOCK){
+  } else if(f->type == FD_SOCK_UDP){
     r = sockread(f->sock, addr, n);
+  } else if (f->type == FD_SOCK_TCP) {
+    r = tcp_read(f, addr, n);
   }
   else {
     panic("fileread");
@@ -180,9 +182,10 @@ filewrite(struct file *f, uint64 addr, int n)
       i += r;
     }
     ret = (i == n ? n : -1);
-  }
-  else if(f->type == FD_SOCK){
+  } else if(f->type == FD_SOCK_UDP){
     ret = sockwrite(f->sock, addr, n);
+  } else if (f->type == FD_SOCK_TCP) {
+    ret = tcp_write(f, addr, n);
   }
   else {
     panic("filewrite");

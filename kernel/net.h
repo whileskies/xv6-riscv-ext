@@ -1,47 +1,26 @@
-//
-// packet buffer management
-//
+typedef uint32 ip_addr_t;
 
-#define MBUF_SIZE              2048
-#define MBUF_DEFAULT_HEADROOM  128
+#define AF_INET 0
 
-struct mbuf {
-  struct mbuf  *next; // the next mbuf in the chain
-  char         *head; // the current start position of the buffer
-  unsigned int len;   // the length of the buffer
-  char         buf[MBUF_SIZE]; // the backing store
+#define SOCK_STREAM 1
+#define SOCK_DGRAM 2
+
+
+#define INADDR_ANY ((ip_addr_t)0)
+
+#define MIN_PORT 10
+#define MAX_PORT_N 5000
+
+struct sockaddr {
+  ushort sa_family;
+  char sa_data[14];
 };
 
-char *mbufpull(struct mbuf *m, unsigned int len);
-char *mbufpush(struct mbuf *m, unsigned int len);
-char *mbufput(struct mbuf *m, unsigned int len);
-char *mbuftrim(struct mbuf *m, unsigned int len);
-
-// The above functions manipulate the size and position of the buffer:
-//            <- push            <- trim
-//             -> pull            -> put
-// [-headroom-][------buffer------][-tailroom-]
-// |----------------MBUF_SIZE-----------------|
-//
-// These marcos automatically typecast and determine the size of header structs.
-// In most situations you should use these instead of the raw ops above.
-#define mbufpullhdr(mbuf, hdr) (typeof(hdr)*)mbufpull(mbuf, sizeof(hdr))
-#define mbufpushhdr(mbuf, hdr) (typeof(hdr)*)mbufpush(mbuf, sizeof(hdr))
-#define mbufputhdr(mbuf, hdr) (typeof(hdr)*)mbufput(mbuf, sizeof(hdr))
-#define mbuftrimhdr(mbuf, hdr) (typeof(hdr)*)mbuftrim(mbuf, sizeof(hdr))
-
-struct mbuf *mbufalloc(unsigned int headroom);
-void mbuffree(struct mbuf *m);
-
-struct mbufq {
-  struct mbuf *head;  // the first element in the queue
-  struct mbuf *tail;  // the last element in the queue
+struct sockaddr_in {
+  ushort sin_family;
+  uint16 sin_port;
+  ip_addr_t sin_addr;
 };
-
-void mbufq_pushtail(struct mbufq *q, struct mbuf *m);
-struct mbuf *mbufq_pophead(struct mbufq *q);
-int mbufq_empty(struct mbufq *q);
-void mbufq_init(struct mbufq *q);
 
 
 //

@@ -1,11 +1,12 @@
 struct file {
-  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE, FD_SOCK } type;
+  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE, FD_SOCK_UDP, FD_SOCK_TCP } type;
   int ref; // reference count
   char readable;
   char writable;
   struct pipe *pipe; // FD_PIPE
   struct inode *ip;  // FD_INODE and FD_DEVICE
-  struct sock *sock; // FD_SOCK
+  struct sock *sock; // FD_SOCK_UDP
+  struct tcp_sock *tcpsock; // FD_SOCK_TCP
   uint off;          // FD_INODE
   short major;       // FD_DEVICE
 };
