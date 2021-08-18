@@ -254,8 +254,8 @@ handle_client(int fd)
     if (n <= 0) {
       die(fd, "read error !\n");
     }
-    printf("n: %d\n", n);
-    printf("line: %s\n", line);
+    // printf("n: %d\n", n);
+    // printf("line: %s\n", line);
 
     memset(&hr, 0, sizeof(hr));
     hr.fd = fd;
